@@ -52,6 +52,8 @@ K_options = reverse([1:D])
 
 # find the correlation matrix of the independent variables of the training data
 cor_matrix = cor(X_train)
+pair_list, magnitude = sorted_correlations(cor_matrix)
+num_pairs = length(magnitude)
 
 #######
 # Build MIO optimization model
@@ -72,7 +74,15 @@ m = Model(solver = GurobiSolver(OutputFlag=0))
 @addConstraint(m, sparsity, sum{z[d], d=1:D} <= K_options[1])
 
 # Pairwise multicolinearity constraint
+threshold_multicol = 0.5
 
+for i=1:num_pairs
+	if magnitude[i] > threshold_multicol
+		@addConstraint(m, z[pair_list[i,1]] + z[pair_list[i,2]] <= 1)
+	else
+		break
+	end
+end
 
 # Objective function
 a = 0	
@@ -128,10 +138,14 @@ y_hat_test = X_test*bestBetavals'
 RSS_test = sum((y_hat_test - y_test).^2)
 R2_test = 1- RSS_test/SST_test
 MIO_nonzeros = find(abs(bestBetavals) .> 0.00001)
+best_K = length(MIO_nonzeros)
+max_corr = maximum(abs(cor_matrix[MIO_nonzeros,MIO_nonzeros]) - eye(best_K))
+
 
 println("\n***RESULTS***")
 println("N:\t", N)
 println("D:\t", D)
-println("best K\t", length(MIO_nonzeros))
+println("best K:\t", best_K)
+println("max corr:\t", max_corr)
 println("MIO R2 test\t", R2_test)
 toc()
