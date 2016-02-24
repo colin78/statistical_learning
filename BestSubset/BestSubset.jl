@@ -1,5 +1,6 @@
 using JuMP, Gurobi
 include("FirstOrderHeuristic.jl")
+include("BestSubset_helper_functions.jl")
 tic()
 ####################################
 # CHANGE THE FOLLOWING FOR YOUR PARTICULAR DATA:
@@ -49,6 +50,9 @@ y_test = y_test .- mean_y_train
 SST_test = sum((mean(y_train) - y_test).^2)
 K_options = reverse([1:D])
 
+# find the correlation matrix of the independent variables of the training data
+cor_matrix = cor(X_train)
+
 #######
 # Build MIO optimization model
 
@@ -66,6 +70,9 @@ m = Model(solver = GurobiSolver(OutputFlag=0))
 
 # Sparsity constraint
 @addConstraint(m, sparsity, sum{z[d], d=1:D} <= K_options[1])
+
+# Pairwise multicolinearity constraint
+
 
 # Objective function
 a = 0	
