@@ -54,20 +54,15 @@ K_options = reverse([1:D])
 
 print("Building optimization model\n")
 
-m = Model(solver = GurobiSolver())
-
-# to specify any solver parameters, add them like this:
-# m = Model(solver = GurobiSolver(TimeLimit = 10, MIPGap = 0.01))
+m = Model(solver = GurobiSolver(OutputFlag=0))
 
 @defVar(m, Beta[1:D]);
 @defVar(m, z[1:D], Bin);
 
 
 # Big M constraints
-for d=1:D
-	@addConstraint(m, Beta[d] <= M*z[d]);
-	@addConstraint(m, -M*z[d] <= Beta[d]);
-end
+@addConstraint(m, m_gt[d=1:D], Beta[d] <= M*z[d]);
+@addConstraint(m, m_lt[d=1:D], -M*z[d] <= Beta[d]);
 
 # Sparsity constraint
 @addConstraint(m, sparsity, sum{z[d], d=1:D} <= K_options[1])
@@ -88,20 +83,20 @@ R2_test = 0
 bestBetavals = zeros(D)
 
 for K in K_options
-	print("\nstarting to solve k = ", K)
+	println("\nstarting to solve k = ", K)
 	chgConstrRHS(sparsity, K) #Sparsity constraint
 	try
-		print("\n getting warm start solution\n")
+		println("getting warm start solution")
 		betaWarm = WarmStart(X_train, y_train, K)
 		zWarm = 1*(betaWarm .!= 0)
 		for d=1:D
 			setValue(Beta[d], betaWarm[d])
 			setValue(z[d], zWarm[d])
 		end
-		print("\n set warm start solution\n")
+		println("set warm start solution")
 		status = solve(m)
 	catch
-		print("\\n *******STATUS ISSUE*****\n", status)
+		println("*******STATUS ISSUE*****", status)
 	finally	
 		for j=1:D
 			Betavals[K, j] = getValue(Beta[j])
@@ -127,10 +122,9 @@ RSS_test = sum((y_hat_test - y_test).^2)
 R2_test = 1- RSS_test/SST_test
 MIO_nonzeros = find(abs(bestBetavals) .> 0.00001)
 
-print("\n\n***RESULTS***")
-print("\n N:\t", N)
-print("\n D:\t", D)
-print("\nbest K\t", length(MIO_nonzeros))
-print("\nMIO R2 test\t", R2_test)
-print("\n")	
+println("\n***RESULTS***")
+println("N:\t", N)
+println("D:\t", D)
+println("best K\t", length(MIO_nonzeros))
+println("MIO R2 test\t", R2_test)
 toc()
