@@ -1,4 +1,4 @@
-include("compressed_sensing.jl")
+include("hw1_functions.jl")
 
 seed = 0
 m = 15
