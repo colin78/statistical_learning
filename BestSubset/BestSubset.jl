@@ -20,14 +20,13 @@ validation = readcsv(validationfile)
 test = readcsv(testfile)
 print("\nDone reading in data\n")
 
-D = size(train)[2] - 1	
-N = size(train)[1]
 y_train = train[:, 1]
-X_train = train[:,2:(D+1)]
+X_train = train[:,2:end]
 y_validation = validation[:, 1]
-X_validation = validation[:,2:(D+1)]
+X_validation = validation[:,2:end]
 y_test = test[:,1]
-X_test = test[:, 2:(D+1)]
+X_test = test[:, 2:end]
+N, D = size(X_train)
 
 
 # determine centering and scaling factors
