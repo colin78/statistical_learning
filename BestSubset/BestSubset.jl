@@ -28,6 +28,15 @@ y_test = test[:,1]
 X_test = test[:, 2:end]
 N, D = size(X_train)
 
+# Add nonlinear transformations
+num_opt = 1 # number of distinct transformations for feature X
+if num_opt > 1
+	X_train = [X_train X_train.^2 sqrt(X_train) log(X_train)]
+	X_validation = [X_validation X_validation.^2 sqrt(X_validation) log(X_validation)]
+	X_test = [X_test X_test.^2 sqrt(X_test) log(X_test)]
+end
+D_orig = D
+D = num_opt*D
 
 # determine centering and scaling factors
 mean_X_train = mean(X_train,1);
@@ -49,7 +58,8 @@ y_test = y_test .- mean_y_train
 SST_test = sum((mean(y_train) - y_test).^2)
 K_options = reverse([1:D])
 
-# find the correlation matrix of the independent variables of the training data
+# Find the correlation matrix of the independent variables
+# of the training data
 cor_matrix = cor(X_train)
 pair_list, magnitude = sorted_correlations(cor_matrix)
 num_pairs = length(magnitude)
@@ -81,6 +91,11 @@ for i=1:num_pairs
 	else
 		break
 	end
+end
+
+# Single choice of nonlinear transformation constraint
+if num_opt > 1
+	@addConstraint(m, non_linear[j=1:D_orig], sum{z[j + t*D_orig], t=0:(num_opt-1)} <= 1)
 end
 
 # Objective function
