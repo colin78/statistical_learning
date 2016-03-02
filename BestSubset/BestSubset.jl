@@ -1,4 +1,4 @@
-using JuMP, Gurobi
+using JuMP, Gurobi, GLM, DataFrames
 include("FirstOrderHeuristic.jl")
 include("BestSubset_helper_functions.jl")
 tic()
@@ -96,7 +96,7 @@ end
 
 # Group sparsity constraint
 group_sparsity = true
-groups = ([1 2 3 4 5 6 7], [8 9 10 11])
+groups = ([1 2 3 4], [5 6 7], [8 9 10 11])
 
 if group_sparsity
 	for i=1:length(groups)
@@ -111,7 +111,7 @@ if num_opt > 1
 end
 
 # Objective function
-a = 0	
+a = 0
 for i=1:N
 	a += 0.5(y_train[i] - dot(Beta, vec(X_train[i,:])))^2
 end
@@ -126,66 +126,79 @@ R2_test = 0
 bestBetavals = zeros(D)
 
 # Robustness
-robustness = true
+robustness = false
 if robustness
 	@defVar(m, Beta_abs[1:D] >= 0)
 	@addConstraint(m, beta_pos[j=1:D], Beta_abs[j] >= Beta[j])
 	@addConstraint(m, beta_neg[j=1:D], Beta_abs[j] >= -Beta[j])
 end
 
-for rho in rho_options
-	# Add robustness by adding L-1 regularizer term
-	if robustness
-		@setObjective(m, :Min, a + rho*sum(Beta_abs))
+# Statistical significance boolean
+significant = false
+
+# while !significant
+	for rho in rho_options
+		# Add robustness by adding L-1 regularizer term
+		if robustness
+			@setObjective(m, :Min, a + rho*sum(Beta_abs))
+		end
+		println()
+
+		for K in K_options
+			println("starting to solve rho = $rho, k = $K")
+			chgConstrRHS(sparsity, K) #Sparsity constraint
+			try
+				# println("getting warm start solution")
+				betaWarm = WarmStart(X_train, y_train, K)
+				zWarm = 1*(betaWarm .!= 0)
+				for d=1:D
+					setValue(Beta[d], betaWarm[d])
+					setValue(z[d], zWarm[d])
+				end
+				# println("set warm start solution")
+				status = solve(m)
+			catch
+				println("*******STATUS ISSUE*****", status)
+			finally	
+				for j=1:D
+					Betavals[K, j] = getValue(Beta[j])
+				end 
+
+				y_hat_validation = X_validation*Betavals[K,:]'
+				RSS_current = sum((y_hat_validation - y_validation).^2)
+				SST = sum((y_validation - mean(y_train)).^2)
+
+				newR2 = 1-RSS_current/SST
+								
+				if (newR2 > bestR2)					
+					bestR2 = newR2
+					bestBetavals = Betavals[K,:]
+				end		
+			end	
+		end
+
+		if !robustness
+			break
+		end
 	end
-	println()
 
-	for K in K_options
-		println("starting to solve rho = $rho, k = $K")
-		chgConstrRHS(sparsity, K) #Sparsity constraint
-		try
-			# println("getting warm start solution")
-			betaWarm = WarmStart(X_train, y_train, K)
-			zWarm = 1*(betaWarm .!= 0)
-			for d=1:D
-				setValue(Beta[d], betaWarm[d])
-				setValue(z[d], zWarm[d])
-			end
-			# println("set warm start solution")
-			status = solve(m)
-		catch
-			println("*******STATUS ISSUE*****", status)
-		finally	
-			for j=1:D
-				Betavals[K, j] = getValue(Beta[j])
-			end 
+	# Check that all variables are statistically significant
+	soln = abs(bestBetavals) .> 0.00001
+	model = linear_model(X_train, y_train, soln)
+	significant = stat_sig(model)
 
-			y_hat_validation = X_validation*Betavals[K,:]'
-			RSS_current = sum((y_hat_validation - y_validation).^2)
-			SST = sum((y_validation - mean(y_train)).^2)
 
-			newR2 = 1-RSS_current/SST
-							
-			if (newR2 > bestR2)					
-				bestR2 = newR2
-				bestBetavals = Betavals[K,:]
-			end		
-		end	
-	end
-
-	if !robustness
-		break
-	end
-end
-
+	# Add a constraint to exclude this solution 
+	# during the next MIP solve
+	# @addConstraint(m, <= D)
+# end
 
 # Out of sample testing
 y_hat_test = X_test*bestBetavals'
 RSS_test = sum((y_hat_test - y_test).^2)
 R2_test = 1- RSS_test/SST_test
-MIO_nonzeros = find(abs(bestBetavals) .> 0.00001)
-best_K = length(MIO_nonzeros)
-max_corr = maximum(abs(cor_matrix[MIO_nonzeros,MIO_nonzeros]) - eye(best_K))
+best_K = sum(soln)
+max_corr = maximum(abs(cor_matrix[soln,soln]) - eye(best_K))
 
 
 println("\n***RESULTS***")
@@ -195,3 +208,4 @@ println("best K:\t", best_K)
 println("max corr:\t", max_corr)
 println("MIO R2 test\t", R2_test)
 toc()
+significant

@@ -24,3 +24,39 @@ function sorted_correlations(cor_matrix)
 
 	return(pair_list, magnitude)
 end
+
+function linear_model(X_train, y_train, soln)
+	K_opt = countnz(soln)
+	df_train = DataFrame([X_train[:,soln] y_train])
+	rename!(df_train, names(df_train)[end], :y)
+
+	if K_opt == 1
+		return lm(y ~ x1, df_train)
+	elseif K_opt == 2
+		return lm(y ~ x1+x2, df_train)
+	elseif K_opt == 3
+		return lm(y ~ x1+x2+x3, df_train)
+	elseif K_opt == 4
+		return lm(y ~ x1+x2+x3+x4, df_train)
+	elseif K_opt == 5
+		return lm(y ~ x1+x2+x3+x4+x5, df_train)
+	elseif K_opt == 6
+		return lm(y ~ x1+x2+x3+x4+x5+x6, df_train)
+	end
+	println("Error in statistical significance test: K_opt = $K_opt > 6")
+end
+
+# Check if all features in linear regression are
+# statistically significant
+function stat_sig(model)
+	conf_int = confint(model)[2:end,:]
+
+	for i=1:length(conf_int[:,1])
+		# Check if this confidence interval contains 0
+		if conf_int[i,1] < 0 && 0 < conf_int[i,2]
+			return false
+		end
+	end
+
+	return true
+end
