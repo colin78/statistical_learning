@@ -56,7 +56,7 @@ y_validation = y_validation .- mean_y_train
 y_test = y_test .- mean_y_train
 
 SST_test = sum((mean(y_train) - y_test).^2)
-K_options = reverse([1:D_orig])
+K_options = [1:D_orig]
 rho_options = [0; 10.0.^[-6:2]] # robustness parameter range
 
 # Find the correlation matrix of the independent variables
@@ -124,6 +124,7 @@ MIO_num_real_RSS = 0
 bestR2 = 0
 R2_test = 0
 bestBetavals = zeros(D)
+bestZ = zeros(D)
 
 # Robustness
 robustness = false
@@ -133,68 +134,96 @@ if robustness
 	@addConstraint(m, beta_neg[j=1:D], Beta_abs[j] >= -Beta[j])
 end
 
-# Statistical significance boolean
-significant = false
+# Statistical significance variables
+verbose = true
+checkSig = true
+bestR2_sig = 0
+bestBetavals_sig = zeros(D)
 
-# while !significant
-	for rho in rho_options
-		# Add robustness by adding L-1 regularizer term
-		if robustness
-			@setObjective(m, :Min, a + rho*sum(Beta_abs))
-		end
-		println()
+for rho in rho_options
+	# Add robustness by adding L-1 regularizer term
+	if robustness
+		@setObjective(m, :Min, a + rho*sum(Beta_abs))
+	end
+	println()
 
-		for K in K_options
+	significant = false
+
+	K = 1
+	max_runs = 10
+	while K <= D
+		significant = false
+
+		if verbose
 			println("starting to solve rho = $rho, k = $K")
-			chgConstrRHS(sparsity, K) #Sparsity constraint
-			try
-				# println("getting warm start solution")
-				betaWarm = WarmStart(X_train, y_train, K)
-				zWarm = 1*(betaWarm .!= 0)
-				for d=1:D
-					setValue(Beta[d], betaWarm[d])
-					setValue(z[d], zWarm[d])
-				end
-				# println("set warm start solution")
-				status = solve(m)
-			catch
-				println("*******STATUS ISSUE*****", status)
-			finally	
-				for j=1:D
-					Betavals[K, j] = getValue(Beta[j])
-				end 
+		end
+		chgConstrRHS(sparsity, K) #Sparsity constraint
+		try
+			# println("getting warm start solution")
+			betaWarm = WarmStart(X_train, y_train, K)
+			zWarm = 1*(betaWarm .!= 0)
+			for d=1:D
+				setValue(Beta[d], betaWarm[d])
+				setValue(z[d], zWarm[d])
+			end
+			# println("set warm start solution")
+			status = solve(m)
+		catch
+			println("*******STATUS ISSUE*****", status)
+		finally	
+			for j=1:D
+				Betavals[K, j] = getValue(Beta[j])
+			end
 
-				y_hat_validation = X_validation*Betavals[K,:]'
-				RSS_current = sum((y_hat_validation - y_validation).^2)
-				SST = sum((y_validation - mean(y_train)).^2)
+			y_hat_validation = X_validation*Betavals[K,:]'
+			RSS_current = sum((y_hat_validation - y_validation).^2)
+			SST = sum((y_validation - mean(y_train)).^2)
 
-				newR2 = 1-RSS_current/SST
-								
-				if (newR2 > bestR2)					
-					bestR2 = newR2
-					bestBetavals = Betavals[K,:]
-				end		
-			end	
+			newR2 = 1-RSS_current/SST
+
+			if(newR2 > bestR2)
+				bestR2 = newR2
+				bestBetavals = Betavals[K,:]'
+				bestZ = getValue(z)[:]
+			end
 		end
 
-		if !robustness
-			break
+		if !checkSig
+			bestR2_sig = bestR2
+			bestBetavals_sig = bestBetavals
+			K += 1
+		else
+			soln = abs(bestBetavals) .> 0.00001
+			significant = stat_sig(X_train, y_train, soln)
+
+			if significant
+				bestR2_sig = bestR2
+				bestBetavals_sig = bestBetavals
+				K += 1
+			else
+				# Add a constraint to exclude this solution 
+				# during the next MIP solve
+				@addConstraint(m, sum{z[j]*bestZ[j] + (1-z[j])*(1-bestZ[j]), j=1:D} <= D - 1)
+				# Reset best R2
+				bestR2 = bestR2_sig
+
+				# For each K, only perform a maximum number of runs
+				max_runs -= 1
+				if max_runs < 0
+					K += 1
+				end
+			end
 		end
 	end
 
-	# Check that all variables are statistically significant
-	soln = abs(bestBetavals) .> 0.00001
-	model = linear_model(X_train, y_train, soln)
-	significant = stat_sig(model)
-
-
-	# Add a constraint to exclude this solution 
-	# during the next MIP solve
-	# @addConstraint(m, <= D)
-# end
+	if !robustness
+		break
+	end
+end
 
 # Out of sample testing
-y_hat_test = X_test*bestBetavals'
+soln = abs(bestBetavals_sig) .> 0.00001
+y_hat_test = X_test*bestBetavals_sig
 RSS_test = sum((y_hat_test - y_test).^2)
 R2_test = 1- RSS_test/SST_test
 best_K = sum(soln)
@@ -208,4 +237,4 @@ println("best K:\t", best_K)
 println("max corr:\t", max_corr)
 println("MIO R2 test\t", R2_test)
 toc()
-significant
+stat_sig(X_train, y_train, soln)

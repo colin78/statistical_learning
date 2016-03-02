@@ -48,7 +48,30 @@ end
 
 # Check if all features in linear regression are
 # statistically significant
-function stat_sig(model)
+function stat_sig(X_train, y_train, soln)
+	K_opt = countnz(soln)
+	df_train = DataFrame([X_train[:,soln] y_train])
+	rename!(df_train, names(df_train)[end], :y)
+
+	if K_opt == 0
+		return false
+	elseif K_opt == 1
+		model = lm(y ~ x1, df_train)
+	elseif K_opt == 2
+		model = lm(y ~ x1+x2, df_train)
+	elseif K_opt == 3
+		model = lm(y ~ x1+x2+x3, df_train)
+	elseif K_opt == 4
+		model = lm(y ~ x1+x2+x3+x4, df_train)
+	elseif K_opt == 5
+		model = lm(y ~ x1+x2+x3+x4+x5, df_train)
+	elseif K_opt == 6
+		model = lm(y ~ x1+x2+x3+x4+x5+x6, df_train)
+	else
+		println("Error in statistical significance test: K_opt = $K_opt > 6")
+		return false
+	end
+
 	conf_int = confint(model)[2:end,:]
 
 	for i=1:length(conf_int[:,1])
