@@ -56,7 +56,8 @@ y_validation = y_validation .- mean_y_train
 y_test = y_test .- mean_y_train
 
 SST_test = sum((mean(y_train) - y_test).^2)
-K_options = reverse([1:D])
+K_options = reverse([1:D_orig])
+rho_options = [0; 10.0.^[-6:2]] # robustness parameter range
 
 # Find the correlation matrix of the independent variables
 # of the training data
@@ -83,13 +84,24 @@ m = Model(solver = GurobiSolver(OutputFlag=0))
 @addConstraint(m, sparsity, sum{z[d], d=1:D} <= K_options[1])
 
 # Pairwise multicolinearity constraint
-threshold_multicol = 0.5
+threshold_multicol = 1
 
 for i=1:num_pairs
 	if magnitude[i] > threshold_multicol
 		@addConstraint(m, z[pair_list[i,1]] + z[pair_list[i,2]] <= 1)
 	else
 		break
+	end
+end
+
+# Group sparsity constraint
+group_sparsity = true
+groups = ([1 2 3 4 5 6 7], [8 9 10 11])
+
+if group_sparsity
+	for i=1:length(groups)
+		num_grp = length(groups[i])
+		@addConstraint(m, sum{z[groups[i][j]], j=1:num_grp} <= 1)
 	end
 end
 
@@ -113,37 +125,57 @@ bestR2 = 0
 R2_test = 0
 bestBetavals = zeros(D)
 
-for K in K_options
-	println("\nstarting to solve k = ", K)
-	chgConstrRHS(sparsity, K) #Sparsity constraint
-	try
-		println("getting warm start solution")
-		betaWarm = WarmStart(X_train, y_train, K)
-		zWarm = 1*(betaWarm .!= 0)
-		for d=1:D
-			setValue(Beta[d], betaWarm[d])
-			setValue(z[d], zWarm[d])
-		end
-		println("set warm start solution")
-		status = solve(m)
-	catch
-		println("*******STATUS ISSUE*****", status)
-	finally	
-		for j=1:D
-			Betavals[K, j] = getValue(Beta[j])
-		end 
+# Robustness
+robustness = true
+if robustness
+	@defVar(m, Beta_abs[1:D] >= 0)
+	@addConstraint(m, beta_pos[j=1:D], Beta_abs[j] >= Beta[j])
+	@addConstraint(m, beta_neg[j=1:D], Beta_abs[j] >= -Beta[j])
+end
 
-		y_hat_validation = X_validation*Betavals[K,:]'
-		RSS_current = sum((y_hat_validation - y_validation).^2)
-		SST = sum((y_validation - mean(y_train)).^2)
+for rho in rho_options
+	# Add robustness by adding L-1 regularizer term
+	if robustness
+		@setObjective(m, :Min, a + rho*sum(Beta_abs))
+	end
+	println()
 
-		newR2 = 1-RSS_current/SST
-						
-		if (newR2 > bestR2)					
-			bestR2 = newR2
-			bestBetavals = Betavals[K,:]
-		end		
-	end	
+	for K in K_options
+		println("starting to solve rho = $rho, k = $K")
+		chgConstrRHS(sparsity, K) #Sparsity constraint
+		try
+			# println("getting warm start solution")
+			betaWarm = WarmStart(X_train, y_train, K)
+			zWarm = 1*(betaWarm .!= 0)
+			for d=1:D
+				setValue(Beta[d], betaWarm[d])
+				setValue(z[d], zWarm[d])
+			end
+			# println("set warm start solution")
+			status = solve(m)
+		catch
+			println("*******STATUS ISSUE*****", status)
+		finally	
+			for j=1:D
+				Betavals[K, j] = getValue(Beta[j])
+			end 
+
+			y_hat_validation = X_validation*Betavals[K,:]'
+			RSS_current = sum((y_hat_validation - y_validation).^2)
+			SST = sum((y_validation - mean(y_train)).^2)
+
+			newR2 = 1-RSS_current/SST
+							
+			if (newR2 > bestR2)					
+				bestR2 = newR2
+				bestBetavals = Betavals[K,:]
+			end		
+		end	
+	end
+
+	if !robustness
+		break
+	end
 end
 
 
