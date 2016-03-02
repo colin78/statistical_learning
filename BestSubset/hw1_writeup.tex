@@ -1,0 +1,80 @@
+\documentclass[12pt]{article}
+
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{amssymb,amsmath,amsthm,multirow, graphicx, amsfonts,latexsym,mathtext, array, enumerate, verbatim, hyperref, listings,color,geometry, caption, subcaption, dsfont}
+
+\newtheorem{cor}{Corollary}
+\newtheorem{thm}{Theorem} 
+\newtheorem{lem}{Lemma}
+\newtheorem{prop}{Proposition}
+\newtheorem{mydef}{Definition}
+\newtheorem{rem}{Remark}
+\newcommand{\M}{\mathbf}
+\newcommand{\MS}{\boldsymbol}
+\newcommand{\Cal}{\mathcal}
+\newcommand{\U}{\mathcal{U}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\1}{\mathds{1}}
+\newcommand{\dx}{\Delta x}
+\newcommand{\dy}{\Delta y}
+
+
+\newenvironment{claim}[1]{\par\noindent\underline{Claim:}\space#1}{}
+\newenvironment{claimproof}[1]{\par\noindent\underline{Proof:}\space#1}{\hfill $\blacksquare$}
+
+
+\begin{document}
+
+\title{15.097 - Homework 1}
+ 
+\author{Colin Pawlowski}
+\maketitle
+
+\section{Compressed Sensing}
+
+\section{Algorithmic Framework for Regression using MIO}
+
+\section{First Order Method}
+
+Here, we derive a first order method following the notes from Lecture 2 - Best Subset Selection.  Consider the problem
+\begin{equation}
+\begin{array}{rll}
+  \min \limits_{\MS \beta} & g(\MS \beta) := \|\M y - \M X \MS \beta \|_2^2 + \Gamma \| \MS \beta \|_1 \vspace{5pt}\\
+  \text{s.t.} & \| \MS \beta \|_0 \le k.
+\end{array}
+\end{equation}\\
+
+Since $g(\MS \beta)$ is convex and $\|\nabla g(\MS \beta) - \nabla g(\MS \beta_0)\| \le \ell \| \MS \beta - \MS \beta_0\|$, it follows that for all $L \ge \ell$
+
+\begin{equation}
+g(\MS \beta) \le Q(\MS \beta) := g(\MS \beta_0) + \nabla g(\MS \beta_0)^T(\MS \beta - \MS \beta_0) + \frac{L}{2} \|\MS \beta - \MS \beta_0\|_2^2 + \Gamma \| \MS \beta \|_1.
+\end{equation}\\
+
+To find feasible solutions, we solve the following problem
+\begin{equation}
+\begin{array}{rll}
+  \min \limits_{\MS \beta} & Q(\MS \beta) \vspace{5pt}\\
+  \text{s.t.} & \| \MS \beta \|_0 \le k.
+\end{array}
+\end{equation}\\
+
+This is equivalent to
+\begin{equation}
+\begin{array}{rll}
+  \min \limits_{\MS \beta} & \displaystyle \frac{L}{2}\Big\|\MS \beta - \Big(\MS \beta_0 - \frac{1}{L} \nabla g(\MS \beta_0)\Big) \Big\|_2^2 - \frac{1}{2L} \|\nabla g(\MS \beta_0) \|_2^2 + \Gamma \| \MS \beta \|_1 \vspace{5pt}\\
+  \text{s.t.} & \| \MS \beta \|_0 \le k,
+\end{array}
+\end{equation}\\
+
+which reduces to the following plus a constant term:
+\begin{equation}
+\begin{array}{rll}
+  \min \limits_{\MS \beta} & \displaystyle \frac{L}{2}\|\MS \beta - \M u \|_2^2 + \Gamma \| \MS \beta \|_1 \vspace{5pt}\\
+  \text{s.t.} & \| \MS \beta \|_0 \le k.
+\end{array}
+\end{equation}\\
+
+
+
+\end{document}
