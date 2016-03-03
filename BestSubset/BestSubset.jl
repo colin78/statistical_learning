@@ -84,7 +84,7 @@ m = Model(solver = GurobiSolver(OutputFlag=0))
 @addConstraint(m, sparsity, sum{z[d], d=1:D} <= K_options[1])
 
 # Pairwise multicolinearity constraint
-threshold_multicol = 1
+threshold_multicol = 0.8
 
 for i=1:num_pairs
 	if magnitude[i] > threshold_multicol
@@ -95,7 +95,7 @@ for i=1:num_pairs
 end
 
 # Group sparsity constraint
-group_sparsity = true
+group_sparsity = false
 groups = ([1 2 3 4], [5 6 7], [8 9 10 11])
 
 if group_sparsity
@@ -127,8 +127,8 @@ bestBetavals = zeros(D)
 bestZ = zeros(D)
 
 # Robustness
-robustness = false
-best_rho = 0
+robustness = true
+best_rho = 0.01
 if robustness
 	@defVar(m, Beta_abs[1:D] >= 0)
 	@addConstraint(m, beta_pos[j=1:D], Beta_abs[j] >= Beta[j])
@@ -137,7 +137,7 @@ end
 
 # Statistical significance variables
 verbose = true
-checkSig = true
+checkSig = false
 bestR2_sig = 0
 bestBetavals_sig = zeros(D)
 
@@ -150,9 +150,9 @@ for rho in rho_options
 
 	significant = false
 
-	K = 1
+	K = 3
 	max_runs = 10
-	while K <= D
+	while K == 3 #<= D
 		significant = false
 
 		if verbose
@@ -195,17 +195,18 @@ for rho in rho_options
 			bestBetavals_sig = bestBetavals
 			K += 1
 		else
-			soln = abs(bestBetavals) .> 0.00001
+			soln = 1*(abs(bestBetavals) .> 0.00001)
 			significant = stat_sig(X_train, y_train, soln)
 
 			if significant
 				bestR2_sig = bestR2
 				bestBetavals_sig = bestBetavals
+				best_rho = rho
 				K += 1
 			else
 				# Add a constraint to exclude this solution 
 				# during the next MIP solve
-				@addConstraint(m, sum{z[j]*bestZ[j] + (1-z[j])*(1-bestZ[j]), j=1:D} <= D - 1)
+				@addConstraint(m, sum{z[j]*soln[j] + (1-z[j])*(1-soln[j]), j=1:D} <= D - 1)
 				# Reset best R2
 				bestR2 = bestR2_sig
 

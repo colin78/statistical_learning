@@ -42,6 +42,8 @@ function linear_model(X_train, y_train, soln)
 		return lm(y ~ x1+x2+x3+x4+x5, df_train)
 	elseif K_opt == 6
 		return lm(y ~ x1+x2+x3+x4+x5+x6, df_train)
+	elseif K_opt == 7
+		return lm(y ~ x1+x2+x3+x4+x5+x6+x7, df_train)
 	end
 	println("Error in statistical significance test: K_opt = $K_opt > 6")
 end
@@ -67,8 +69,10 @@ function stat_sig(X_train, y_train, soln)
 		model = lm(y ~ x1+x2+x3+x4+x5, df_train)
 	elseif K_opt == 6
 		model = lm(y ~ x1+x2+x3+x4+x5+x6, df_train)
+	elseif K_opt == 7
+		return lm(y ~ x1+x2+x3+x4+x5+x6+x7, df_train)
 	else
-		println("Error in statistical significance test: K_opt = $K_opt > 6")
+		println("Error in statistical significance test: K_opt = $K_opt > 7")
 		return false
 	end
 
