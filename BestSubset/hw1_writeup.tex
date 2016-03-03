@@ -87,16 +87,34 @@ Problem~\ref{eq:1var} has closed form solution
 
 \begin{equation}
 \beta_{(i)}^* = \left\{\begin{array}{rl} 
-u_{(i)} - \displaystyle \frac{\Gamma}{L}\text{sign}(u_{(i)}), &~~~\rm{if}~|u_{(i)}| \ge \displaystyle \frac{\Gamma}{L}, \vspace{5pt}\\
+u_{(i)} - \displaystyle \frac{\Gamma}{L}\text{sign}(u_{(i)}), &~~~{\rm if}~|u_{(i)}| \ge \displaystyle \frac{\Gamma}{L}, \vspace{5pt}\\
+0, &~~~\rm{otherwise.}
+\end{array} \right.
+\end{equation}\\
+
+Thus, the optimal solution to problem~\ref{u_prob} is $\MS \beta^* = \M H_k(\M u)$, where
+\begin{equation}
+(\M H_k(\M u))_i = \left\{\begin{array}{rl} 
+u_{(i)} - \displaystyle \frac{\Gamma}{L}\text{sign}(u_{(i)}), &~~~{\rm if}~|u_{(i)}| \ge \displaystyle \frac{\Gamma}{L}~{\rm and}~i \le k, \vspace{5pt}\\
 0, &~~~\rm{otherwise.}
 \end{array} \right.
 \end{equation}
-%\left\{\begin{array}{rl} u_{(i)} - \frac{\Gamma \text{sign}(u_{(i)})}{L}, &~~~\rm{if}~|u_{(i)}| \ge \frac{\Gamma}{L}, \vspace{3pt}\\
-%0, &~~~\rm{otherwise}
-%\end{array} \right.
 
-%1, & {\rm if}~d_i \leq d^{(\Gamma)}, \vspace{3pt}\\
-%0, & {\rm otherwise.} \\
-%\end{array} \right.
+Using this update iteratively to determine the $\beta_i$'s, we obtain the following first order method:\\
+
+\underline{\bf Algorithm 1}\\
+
+\emph{Input}: $g(\MS \beta), L, \epsilon$.\\
+
+\emph{Output}: A first order stationary solution $\MS \beta^*$.
+
+\begin{enumerate}
+	\item Initialize with $\MS \beta_1 \in \R^p$ such that $\|\MS \beta_1\|_0 \le k$.
+	\item For $m \ge 1$
+	\[
+	\MS \beta_{m+1} \leftarrow \M H_k(\MS \beta_0 - \frac{1}{L} \nabla g(\MS \beta_0))
+	\]
+	\item Repeat Step 2, until $g(\MS \beta_m) - g(\MS \beta_{m+1}) \le \epsilon$.
+\end{enumerate}
 
 \end{document}
