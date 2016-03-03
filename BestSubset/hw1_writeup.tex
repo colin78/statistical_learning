@@ -71,9 +71,19 @@ Using linear optimization, we can reformulate this problem as
 
 We implemented both optimization problems~\ref{eq1:MIO} and \ref{eq1:LO} in JuMP.  For the simulated experiments, we generated a random $20 \times 20$ matrix $\M M$ with entries $a_{ij} \sim N(0,1)~i.i.d.$.  For a fixed triplet $(k, m, n)$, we solved problems~\ref{eq1:MIO} and \ref{eq1:LO}, where $\M A$ is the upper $m \times n$ submatrix of $\M M$, $\M{x_0} \in \{0,1\}^n$ is the vector with the first $k$ components 1 and the rest 0, and $\M{b = Ax_0}$.   We repeated this experiment for all possible combinations $k \le m \le n = 20$, and tracked the number of successfully recovered components of $\M x_0$ recovered by each method.  
 
-We found that the MIO formulation always found a solution with at most $k$ nonzero components, and in some cases found solutions which were even more sparse than $\M{x_0}$ due to numerical approximations.  On the other hand, the LO formulation correctly recovered the $\M{x_0}$ solution sometimes, but in many cases LO yielded solutions with greater than $k$ nonzero components.  For the LO formulation, we plot the results below in a phase diagram with axes $m/n$ and $k/m$, indicating whether or not the correct sparsity pattern was recovered at each data point.  
+We found that the MIO formulation always found a solution with at most $k$ nonzero components, and in some cases found solutions which were even more sparse than $\M{x_0}$ due to numerical approximations.  On the other hand, the LO formulation correctly recovered the $\M{x_0}$ solution sometimes, but in many cases LO yielded solutions with greater than $k$ nonzero components.  We plot the results in phase diagrams with axes $m/n$ and $k/m$, indicating whether or not the correct sparsity pattern was recovered at each data point.  
 
+\begin{figure}[tb]
+  \centering
+  \includegraphics[width=0.8\textwidth]{phase_MIO}
+  \caption{Phase diagram for MIO.}\label{fig:MIO_phase}
+\end{figure}
 
+\begin{figure}[tb]
+  \centering
+  \includegraphics[width=0.8\textwidth]{phase_LO}
+  \caption{Phase diagram for LO.}\label{fig:LO_phase}
+\end{figure}
 
 \section{Algorithmic Framework for Regression using MIO}
 
