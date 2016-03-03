@@ -128,6 +128,7 @@ bestZ = zeros(D)
 
 # Robustness
 robustness = false
+best_rho = 0
 if robustness
 	@defVar(m, Beta_abs[1:D] >= 0)
 	@addConstraint(m, beta_pos[j=1:D], Beta_abs[j] >= Beta[j])
@@ -185,6 +186,7 @@ for rho in rho_options
 				bestR2 = newR2
 				bestBetavals = Betavals[K,:]'
 				bestZ = getValue(z)[:]
+				best_rho = rho
 			end
 		end
 
@@ -234,6 +236,7 @@ println("\n***RESULTS***")
 println("N:\t", N)
 println("D:\t", D)
 println("best K:\t", best_K)
+println("best rho:\t", best_rho)
 println("max corr:\t", max_corr)
 println("MIO R2 test\t", R2_test)
 toc()
