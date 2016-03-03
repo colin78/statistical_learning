@@ -32,8 +32,48 @@
 \maketitle
 
 \section{Compressed Sensing}
+Assume $\M A$ is an $m \times n$ matrix, $n > m$.  Consider the problem
+\begin{equation}
+\begin{array}{rll}
+  \min & \|\M x\|_0 \vspace{5pt}\\
+  \text{s.t.} & \M{Ax = b}.
+\end{array}
+\end{equation}\\
+%
+Using MIO, we reformulate this problem as
+\begin{equation}
+\label{eq1:MIO}
+\begin{array}{rll}
+  \min & \sum \limits_{i=1}^n z_i \vspace{5pt}\\
+  \text{s.t.} & \M{Ax = b},  \vspace{3pt}\\
+  & -Mz_i \le x_i \le Mz_i &~~~i=1,\ldots,n, \vspace{3pt}\\
+  & z_i \in \{0,1\} &~~~i=1,\ldots,n. \vspace{3pt}\\
+\end{array}
+\end{equation}\\
+%
+Next, consider the problem
+\begin{equation}
+\begin{array}{rll}
+  \min & \|\M x\|_1 \vspace{5pt}\\
+  \text{s.t.} & \M{Ax = b}.
+\end{array}
+\end{equation}\\
+%
+Using linear optimization, we can reformulate this problem as
+\begin{equation}
+\label{eq1:LO}
+\begin{array}{rll}
+  \min & \sum \limits_{i=1}^n y_i \vspace{5pt}\\
+  \text{s.t.} & \M{Ax = b},  \vspace{3pt}\\
+  & -y_i \le x_i \le y_i &~~~i=1,\ldots,n. \vspace{3pt}\\
+\end{array}
+\end{equation}\\
+
+
 
 \section{Algorithmic Framework for Regression using MIO}
+
+
 
 \section{First Order Method}
 
