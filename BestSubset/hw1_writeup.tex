@@ -69,12 +69,34 @@ This is equivalent to
 
 which reduces to the following plus a constant term:
 \begin{equation}
+\label{u_prob}
 \begin{array}{rll}
   \min \limits_{\MS \beta} & \displaystyle \frac{L}{2}\|\MS \beta - \M u \|_2^2 + \Gamma \| \MS \beta \|_1 \vspace{5pt}\\
   \text{s.t.} & \| \MS \beta \|_0 \le k.
 \end{array}
 \end{equation}\\
 
+For the vector $\M u \in \R^p$, let $(1), (2), \ldots (p)$ be the indices of the order statistics $|u_{(1)}| \ge |u_{(2)}| \ge \ldots \ge |u_{(p)}|$.  At the optimal solution $\MS \beta^*$ to problem~\ref{u_prob}, we have $|\beta_{(1)}^*| \ge |\beta_{(2)}^*| \ge \ldots \ge |\beta_{(p)}^*|$, which implies that $|\beta_{(k+1)}^*| = |\beta_{(k + 2)}^*| = \ldots = |\beta_{(p)}^*| = 0$.  For $i \le k$, $\beta_{(i)}^*$ is the optimal solution to the following unconstrained single variable problem:
 
+\begin{equation}
+\label{eq:1var}
+\min \limits_{\beta_{(i)}} \frac{L}{2}(\beta_{(i)} - u_{(i)})^2 + \Gamma |\beta_{(i)} |.
+\end{equation}\\
+
+Problem~\ref{eq:1var} has closed form solution
+
+\begin{equation}
+\beta_{(i)}^* = \left\{\begin{array}{rl} 
+u_{(i)} - \displaystyle \frac{\Gamma}{L}\text{sign}(u_{(i)}), &~~~\rm{if}~|u_{(i)}| \ge \displaystyle \frac{\Gamma}{L}, \vspace{5pt}\\
+0, &~~~\rm{otherwise.}
+\end{array} \right.
+\end{equation}
+%\left\{\begin{array}{rl} u_{(i)} - \frac{\Gamma \text{sign}(u_{(i)})}{L}, &~~~\rm{if}~|u_{(i)}| \ge \frac{\Gamma}{L}, \vspace{3pt}\\
+%0, &~~~\rm{otherwise}
+%\end{array} \right.
+
+%1, & {\rm if}~d_i \leq d^{(\Gamma)}, \vspace{3pt}\\
+%0, & {\rm otherwise.} \\
+%\end{array} \right.
 
 \end{document}
