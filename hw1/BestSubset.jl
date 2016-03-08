@@ -9,9 +9,9 @@ tic()
 M = 50
 
 # PATH TO YOUR DATASETS HERE
-trainfile = "Train lpga2009_opt.csv" 
-validationfile = "Validation lpga2009_opt.csv" 
-testfile = "Test lpga2009_opt.csv"
+trainfile = "Data/Train lpga2008_opt.csv" 
+validationfile = "Data/Validation lpga2008_opt.csv" 
+testfile = "Data/Test lpga2008_opt.csv"
 
 ####################################
 
@@ -29,7 +29,7 @@ X_test = test[:, 2:end]
 N, D = size(X_train)
 
 # Add nonlinear transformations
-num_opt = 1 # number of distinct transformations for feature X
+num_opt = 4 # number of distinct transformations for feature X
 if num_opt > 1
 	X_train = [X_train X_train.^2 sqrt(X_train) log(X_train)]
 	X_validation = [X_validation X_validation.^2 sqrt(X_validation) log(X_validation)]
@@ -150,9 +150,9 @@ for rho in rho_options
 
 	significant = false
 
-	K = 3
+	K = 1
 	max_runs = 10
-	while K == 3 #<= D
+	while K <= D
 		significant = false
 
 		if verbose

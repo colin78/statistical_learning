@@ -75,25 +75,28 @@ We found that the MIO formulation always found a solution with at most $k$ nonze
 
 \begin{figure}[tb]
   \centering
-  \includegraphics[width=0.8\textwidth]{phase_MIO}
+  \includegraphics[width=0.8\textwidth]{figures/phase_MIO}
   \caption{Phase diagram for MIO.}\label{fig:MIO_phase}
 \end{figure}
 
 \begin{figure}[tb]
   \centering
-  \includegraphics[width=0.8\textwidth]{phase_LO}
+  \includegraphics[width=0.8\textwidth]{figures/phase_LO}
   \caption{Phase diagram for LO.}\label{fig:LO_phase}
 \end{figure}
 
 \section{Algorithmic Framework for Regression using MIO}
 
-We implemented an algorithmic framework for regression in JuMP, building upon the code BestSubset.jl which already incorporates sparsity.  To incorporate robustness, we added an L-0 penalty term $\Gamma \|\MS \beta\|_1$ to the objective and used cross-validation to find the optimal value of robustness parameter $\Gamma$. Searching over the range $\Gamma \in \{10^{-6},10^{-5},\ldots,10^2\}$, we found that the optimal value $\Gamma = 0.01$.  To incorporate pairwise collinearity, we computed the complete correlation matrix and added a threshold input $\rho_{max}$ specified by the user.  For all features $(\beta_i, \beta_j)$ with pairwise correlation $\rho_{ij} > \rho_{max}$, we added the constraint $z_i + z_j \le 1$.  To incorporate group sparsity, we added user input a list of subsets $S_1,\ldots, S_k \subset \{1,\ldots, D\}$.  For each group $g = 1,\ldots,k$, we add the constraints $z_i = z_j, \forall i,j \in S_k$.  To incorporate nonlinear transformations, we appended the features $\sqrt{\beta_i}, \beta_i^2, \log \beta_i$ to the training, validation, and test matrices for all features $\beta_i, i=1,\ldots,D$.  We then ran the MIO problem with the full feature vector $\hat{\MS \beta} = [\beta_1,\ldots, \beta_D, \sqrt{\beta_1}, \ldots, \sqrt{\beta_D}, \beta_1^2, \ldots, \beta_D^2, \log \beta_1, \ldots, \log \beta_D]$.   To ensure that only one transformation of each feature would be used in the final model, we added the constraints $z_i + z_{i+D} + z_{i+2D} + z_{i+3D} \le 1$ for all $i = 1,\ldots,D$.    Finally, we added a user input boolean to check for statistical significance.  If true, then each time we find a model with improved validation set $R^2$, we compute the standard linear regression on the features that have nonzero $\beta_i$ coefficients in the current solution.  If one or more of the independent variables in this regression are not statistically significant, then we do not update the current best solution, and we add a constraint to exclude this particular solution from the MIO feasible region.  Assume that we find solution $\MS {\tilde \beta}$ that is not statistically significant, with associated sparsity vector $\M {\tilde z} \in \{0,1\}^D$.  To exclude this solution for the next MIO solve, we add the constraint
+We implemented an algorithmic framework for regression in JuMP, building upon the code BestSubset.jl which already incorporates sparsity.  To incorporate robustness, we added an L-0 penalty term $\Gamma \|\MS \beta\|_1$ to the objective and used cross-validation to find the optimal value of robustness parameter $\Gamma$. Searching over the range $\Gamma \in \{10^{-6},10^{-5},\ldots,10^2\}$, we found that the optimal value $\Gamma = 1.0$.  To incorporate pairwise collinearity, we computed the complete correlation matrix and added a threshold input $\rho_{max}$ specified by the user.  For all features $(\beta_i, \beta_j)$ with pairwise correlation $\rho_{ij} > \rho_{max}$, we added the constraint $z_i + z_j \le 1$.  To incorporate group sparsity, we added user input a list of subsets $S_1,\ldots, S_k \subset \{1,\ldots, D\}$.  For each group $g = 1,\ldots,k$, we add the constraints $z_i = z_j, \forall i,j \in S_k$.  To incorporate nonlinear transformations, we appended the features $\sqrt{\beta_i}, \beta_i^2, \log \beta_i$ to the training, validation, and test matrices for all features $\beta_i, i=1,\ldots,D$.  We then ran the MIO problem with the full feature vector $\hat{\MS \beta} = [\beta_1,\ldots, \beta_D, \sqrt{\beta_1}, \ldots, \sqrt{\beta_D}, \beta_1^2, \ldots, \beta_D^2, \log \beta_1, \ldots, \log \beta_D]$.   To ensure that only one transformation of each feature would be used in the final model, we added the constraints $z_i + z_{i+D} + z_{i+2D} + z_{i+3D} \le 1$ for all $i = 1,\ldots,D$.    Finally, we added a user input boolean to check for statistical significance.  If true, then each time we find a model with improved validation set $R^2$, we compute the standard linear regression on the features that have nonzero $\beta_i$ coefficients in the current solution.  If one or more of the independent variables in this regression are not statistically significant, then we do not update the current best solution, and we add a constraint to exclude this particular solution from the MIO feasible region.  Assume that we find solution $\MS {\tilde \beta}$ that is not statistically significant, with associated sparsity vector $\M {\tilde z} \in \{0,1\}^D$.  To exclude this solution for the next MIO solve, we add the constraint
 \[
 \sum_{i=1}^D {\tilde z_i} z_i + (1 - {\tilde z_i})(1 - z_i) \le D - 1.
 \]
 
-Running our model with sparsity, nonlinear transformations, and maximum pairwise correlation 0.8, we obtain a model with maximum pairwise correlation 0.784, sparsity $K = 7$ nonzero coefficients including features $[\beta_{10}, \beta_{12}, \beta_{13}, \beta_{18}, \beta_{22}, \beta_{37}, \beta_{38}]$, which yields Out-of-Sample $R^2 = 0.815$ in 11.437 seconds.  Running our model with sparsity, robustness, statistical significance, and maximum pairwise correlation 0.8, we obtain a model with maximum pairwise correlation 0.784, robustness parameter $\rho = 0.0$, sparsity $K = 3$ nonzero coefficients including features $[\beta_{7}, \beta_{10}, \beta_{11}]$, which yields Out-of-Sample $R^2 = 0.806$ in 0.553 seconds.
+Running our model with robustness, sparsity, nonlinear transformations, maximum pairwise correlation 0.8, and statistical significance checks, we obtain a model with robustness parameter $\Gamma = 1.0$, maximum pairwise correlation 0.0155, and sparsity $K = 2$ nonzero coefficients including features $[\beta_{9}=5.282, \beta_{10}=-4.902]$, which yields Out-of-Sample $R^2 = 0.878$ in 9.428 seconds.  We obtain linear model
 
+\begin{equation}
+y = 5.282 x_3^2 - 4.902 x_4^2.
+\end{equation}
 
 \section{First Order Method}
 
