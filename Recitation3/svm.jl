@@ -92,8 +92,6 @@ function svm(x, y; model="hinge_loss", rho=0, gamma_perc=0,
 	return(getValue(w)[:], getValue(b))
 end
 
-# w_opt, b_opt, is_opt = svm(X_train, Y_train, model="robXY", rho=0.1, gamma_perc=0.1)
-
 # predict the labels y = -1/+1
 function predict_svm(X_test, w, b)
 	y_pred = sum(X_test .* w',2) - b .>= 0
@@ -105,7 +103,8 @@ function calc_accu(X_test, Y_test, w, b)
 	return countnz(Y_test .== predict_svm(X_test, w, b))/length(Y_test)
 end
 
-##### Nominal 
+println("-----------Regular SVM-----------")
+##### Nominal
 tic()
 w, b = svm(X_train, Y_train)
 accu = calc_accu(X_test, Y_test, w, b)
@@ -130,3 +129,5 @@ tic()
 w, b = svm(X_train, Y_train, model="robXY", rho=0.1, gamma_perc=0.1);
 accu = calc_accu(X_test, Y_test, w, b)
 println("Robust-in-both SVM: \tTime = ", toq(), "\tOS-Accuracy = ", accu)
+
+println("\n-----------Discrete SVM-----------")
