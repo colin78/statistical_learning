@@ -86,6 +86,38 @@ function svm(x, y; model="hinge_loss", C=0, rho=0, gamma_perc=0,
 	return(getValue(w)[:], getValue(b))
 end
 
+function dsvm(x, y; model="hinge_loss", rho=0,
+			M=10000, OutputFlag=0, TimeLimit=600,
+			warm_w=0, warm_b=0, LogFile="", Threads=0)
+	m = Model(solver=GurobiSolver(TimeLimit=TimeLimit, OutputFlag=OutputFlag, LogFile=LogFile,Threads=Threads))
+	n,p = size(x)
+	@defVar(m, z[1:n], Bin)
+	@defVar(m, w[1:p])
+	@defVar(m, b)
+	if(warm_w!=0)
+		setValue(w, warm_w)
+		setValue(b, warm_b)
+	end
+
+	@defExpr(d[i=1:n], y[i]*(sum{x[i,j]*w[j], j=1:p} - b))
+
+	if model == "hinge_loss"
+		@addConstraint(m, z_gt[i=1:n], d[i] >= 1 - M*z[i])
+	
+	# Robust Features: L-1 norm uncertainty set
+	elseif model == "robX"
+		@defVar(m, winf >= 0)
+		@addConstraint(m, pos_abs[j=1:p], winf >= w[j])
+		@addConstraint(m, neg_abs[j=1:p], winf >= -w[j])
+		@addConstraint(m, z_gt[i=1:n], d[i] - rho*winf >= 1 - M*z[i])
+	end
+
+	@setObjective(m, Min, sum(z))
+	solve(m)
+
+	return(getValue(w)[:], getValue(b))
+end
+
 # predict the labels y = -1/+1
 function predict_svm(X_test, w, b)
 	y_pred = sum(X_test .* w',2) - b .>= 0
@@ -96,6 +128,9 @@ end
 function calc_accu(X_test, Y_test, w, b)
 	return countnz(Y_test .== predict_svm(X_test, w, b))/length(Y_test)
 end
+
+w, b = dsvm(X_train, Y_train, model="robX", rho=0.1)
+calc_accu(X_test, Y_test, w, b)
 
 # println("-----------Regular SVM-----------")
 # ##### Nominal
@@ -124,4 +159,14 @@ end
 # accu = calc_accu(X_test, Y_test, w, b)
 # println("Robust-in-both SVM: \tTime = ", toq(), "\tOS-Accuracy = ", accu)
 
-# println("\n-----------Discrete SVM-----------")
+println("\n-----------Discrete SVM-----------")
+##### Nominal
+tic()
+w, b = dsvm(X_train, Y_train)
+accu = calc_accu(X_test, Y_test, w, b)
+println("Nominal: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+#####  Robust X
+tic()
+w, b = dsvm(X_train, Y_train, model="robX", rho=0.1);
+accu = calc_accu(X_test, Y_test, w, b)
+println("Robust-X DSVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
