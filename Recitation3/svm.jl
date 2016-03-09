@@ -17,7 +17,7 @@ Y_train = 2*Y_train-1
 Y_test = 2*Y_test-1
 
 function svm(x, y; model="hinge_loss", rho=0, gamma_perc=0,
-			M=10000, OutputFlag=1, TimeLimit=600,
+			M=10000, OutputFlag=0, TimeLimit=600,
 			warm_w=0, warm_b=0, LogFile="", Threads=0)
 	m = Model(solver=GurobiSolver(TimeLimit=TimeLimit, OutputFlag=OutputFlag, LogFile=LogFile,Threads=Threads))
 	n,p = size(x)
@@ -87,10 +87,46 @@ function svm(x, y; model="hinge_loss", rho=0, gamma_perc=0,
 		@setObjective(m, Max, sum(eps) + gamma_perc*n*q + sum(r))
 	end
 
-	status = solve(m)
-	isOptimal = (status == :Optimal)
+	solve(m)
 
-	return(getValue(w)[:], getValue(b), isOptimal)
+	return(getValue(w)[:], getValue(b))
 end
 
-w_opt, b_opt, is_opt = svm(X_train, Y_train, model="robXY", rho=0.1, gamma_perc=0.1)
+# w_opt, b_opt, is_opt = svm(X_train, Y_train, model="robXY", rho=0.1, gamma_perc=0.1)
+
+# predict the labels y = -1/+1
+function predict_svm(X_test, w, b)
+	y_pred = sum(X_test .* w',2) - b .>= 0
+	
+	return 2*y_pred-1
+end
+
+function calc_accu(X_test, Y_test, w, b)
+	return countnz(Y_test .== predict_svm(X_test, w, b))/length(Y_test)
+end
+
+##### Nominal 
+tic()
+w, b = svm(X_train, Y_train)
+accu = calc_accu(X_test, Y_test, w, b)
+println("Nominal: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+##### Classical SVM
+# tic()
+# w, b = svm(X_train, Y_train, lambda = 0.08, reg = true);
+# accu = calc_accu(X_test, Y_test, w, b)
+# println("Classical SVM:\t Time = ", toq(), "    OS-Accuracy = ", accu_reg)
+#####  Robust X
+tic()
+w, b = svm(X_train, Y_train, model="robX", rho=0.1);
+accu = calc_accu(X_test, Y_test, w, b)
+println("Robust-X SVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+#####  Robust Y
+tic()
+w, b = svm(X_train, Y_train, model="robX", gamma_perc=0.1);
+accu = calc_accu(X_test, Y_test, w, b)
+println("Robust-Y SVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+#####  Robust in Both
+tic()
+w, b = svm(X_train, Y_train, model="robXY", rho=0.1, gamma_perc=0.1);
+accu = calc_accu(X_test, Y_test, w, b)
+println("Robust-in-both SVM: \tTime = ", toq(), "\tOS-Accuracy = ", accu)
