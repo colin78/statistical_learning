@@ -51,22 +51,23 @@ function svm(x, y; model="hinge_loss", C=0, rho=0, gamma_perc=0,
 
 	# Mixed-Integer Optimization Formulations
 	else
-		@defVar(m, phi[1:n] <= 0)
+		@defVar(m, r[1:n] >= 0)
+		@defVar(m, phi[1:n] >= 0)
+		@defVar(m, q >= 0)
 		@defVar(m, s[1:n], Bin)
 		@defVar(m, t[1:n], Bin)
-		@defVar(m, q <= 0)
-		@defVar(m, r[1:n] <= 0)
-		@addConstraint(m, qr_lt[i=1:n], q + r[i] <= phi[i] - eps[i])
-		@addConstraint(m, esp_gt1[i=1:n], eps[i] >= -M*s[i])
-		@addConstraint(m, phi_gt1[i=1:n], phi[i] >= -M*t[i])
-		@setObjective(m, Max, sum(eps) + gamma_perc*n*q + sum(r))
+		
+		@addConstraint(m, qr_gt[i=1:n], q + r[i] >= phi[i] - eps[i])
+		@addConstraint(m, esp_lt1[i=1:n], eps[i] <= M*s[i])
+		@addConstraint(m, phi_lt1[i=1:n], phi[i] <= M*t[i])
+		@setObjective(m, Min, sum(eps) + gamma_perc*n*q + sum(r))
 
 		# Robust Labels: L-1 norm uncertainty set
 		if model == "robY"
-			@addConstraint(m, eps_lt[i=1:n], eps[i] <= d[i] - 1)
-			@addConstraint(m, phi_lt[i=1:n], phi[i] <= -d[i] - 1)
-			@addConstraint(m, esp_gt2[i=1:n], eps[i] >= d[i] - 1 - M*(1-s[i]))
-			@addConstraint(m, phi_gt2[i=1:n], phi[i] >= -d[i] - 1 - M*(1-t[i]))
+			@addConstraint(m, eps_gt[i=1:n], eps[i] >= 1 - d[i])
+			@addConstraint(m, phi_gt[i=1:n], phi[i] >= 1 + d[i])
+			@addConstraint(m, esp_lt2[i=1:n], eps[i] <= 1 - d[i] + M*(1-s[i]))
+			@addConstraint(m, phi_lt2[i=1:n], phi[i] <= 1 + d[i] + M*(1-t[i]))
 
 		# Robust in both Features and Labels: L-1 norm uncertainty set
 		elseif model == "robXY"
@@ -74,10 +75,10 @@ function svm(x, y; model="hinge_loss", C=0, rho=0, gamma_perc=0,
 			@addConstraint(m, pos_abs[j=1:p], winf >= w[j])
 			@addConstraint(m, neg_abs[j=1:p], winf >= -w[j])
 
-			@addConstraint(m, eps_lt[i=1:n], eps[i] <= d[i] - 1 - rho*winf)
-			@addConstraint(m, phi_lt[i=1:n], phi[i] <= -d[i] - 1 - rho*winf)
-			@addConstraint(m, esp_gt2[i=1:n], eps[i] >= d[i] - 1 - M*(1-s[i]) - rho*winf)
-			@addConstraint(m, phi_gt2[i=1:n], phi[i] >= -d[i] - 1 - M*(1-t[i]) - rho*winf)
+			@addConstraint(m, eps_gt[i=1:n], eps[i] >= 1 - d[i] + rho*winf)
+			@addConstraint(m, phi_gt[i=1:n], phi[i] >= 1 + d[i] + rho*winf)
+			@addConstraint(m, esp_lt2[i=1:n], eps[i] <= 1 - d[i] + M*(1-s[i]) + rho*winf)
+			@addConstraint(m, phi_lt2[i=1:n], phi[i] <= 1 + d[i] + M*(1-t[i]) + rho*winf)
 		end
 	end
 
@@ -129,22 +130,22 @@ function calc_accu(X_test, Y_test, w, b)
 	return countnz(Y_test .== predict_svm(X_test, w, b))/length(Y_test)
 end
 
-# println("-----------Regular SVM-----------")
-# ##### Nominal
-# tic()
-# w, b = svm(X_train, Y_train)
-# accu = calc_accu(X_test, Y_test, w, b)
-# println("Nominal: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
-# ##### Classical SVM
-# tic()
-# w, b = svm(X_train, Y_train, model="classical", C=1)
-# accu = calc_accu(X_test, Y_test, w, b)
-# println("Classical SVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
-# #####  Robust X
-# tic()
-# w, b = svm(X_train, Y_train, model="robX", rho=0.1)
-# accu = calc_accu(X_test, Y_test, w, b)
-# println("Robust-X SVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+println("-----------Regular SVM-----------")
+##### Nominal
+tic()
+w, b = svm(X_train, Y_train)
+accu = calc_accu(X_test, Y_test, w, b)
+println("Nominal: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+##### Classical SVM
+tic()
+w, b = svm(X_train, Y_train, model="classical", C=1)
+accu = calc_accu(X_test, Y_test, w, b)
+println("Classical SVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+#####  Robust X
+tic()
+w, b = svm(X_train, Y_train, model="robX", rho=0.1)
+accu = calc_accu(X_test, Y_test, w, b)
+println("Robust-X SVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
 # #####  Robust Y
 # tic()
 # w, b = svm(X_train, Y_train, model="robX", gamma_perc=0.1)
@@ -156,14 +157,14 @@ end
 # accu = calc_accu(X_test, Y_test, w, b)
 # println("Robust-in-both SVM: \tTime = ", toq(), "\tOS-Accuracy = ", accu)
 
-# println("\n-----------Discrete SVM-----------")
-# ##### Nominal
-# tic()
-# w, b = dsvm(X_train, Y_train)
-# accu = calc_accu(X_test, Y_test, w, b)
-# println("Nominal: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
-# #####  Robust X
-# tic()
-# w, b = dsvm(X_train, Y_train, model="robX", rho=0.1);
-# accu = calc_accu(X_test, Y_test, w, b)
-# println("Robust-X DSVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+println("\n-----------Discrete SVM-----------")
+##### Nominal
+tic()
+w, b = dsvm(X_train, Y_train)
+accu = calc_accu(X_test, Y_test, w, b)
+println("Nominal: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+#####  Robust X
+tic()
+w, b = dsvm(X_train, Y_train, model="robX", rho=0.1);
+accu = calc_accu(X_test, Y_test, w, b)
+println("Robust-X DSVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
