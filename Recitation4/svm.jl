@@ -146,16 +146,16 @@ tic()
 w, b = svm(X_train, Y_train, model="robX", rho=0.1)
 accu = calc_accu(X_test, Y_test, w, b)
 println("Robust-X SVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
-# #####  Robust Y
-# tic()
-# w, b = svm(X_train, Y_train, model="robX", gamma_perc=0.1)
-# accu = calc_accu(X_test, Y_test, w, b)
-# println("Robust-Y SVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
-# #####  Robust in Both
-# tic()
-# w, b = svm(X_train, Y_train, model="robXY", rho=0.1, gamma_perc=0.1);
-# accu = calc_accu(X_test, Y_test, w, b)
-# println("Robust-in-both SVM: \tTime = ", toq(), "\tOS-Accuracy = ", accu)
+#####  Robust Y
+tic()
+w, b = svm(X_train, Y_train, model="robX", gamma_perc=0.1)
+accu = calc_accu(X_test, Y_test, w, b)
+println("Robust-Y SVM: \t\tTime = ", toq(), "\tOS-Accuracy = ", accu)
+#####  Robust in Both
+tic()
+w, b = svm(X_train, Y_train, model="robXY", rho=0.1, gamma_perc=0.1);
+accu = calc_accu(X_test, Y_test, w, b)
+println("Robust-in-both SVM: \tTime = ", toq(), "\tOS-Accuracy = ", accu)
 
 println("\n-----------Discrete SVM-----------")
 ##### Nominal
